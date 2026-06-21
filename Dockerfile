@@ -61,7 +61,7 @@ RUN pip install --no-cache-dir \
 # 4. Clone PatZilla source and install properly
 #    (source install registers entry points correctly)
 # -------------------------------------------
-RUN git clone --depth=1 --branch v0.169.3 https://github.com/ip-tools/patzilla.git /tmp/patzilla \
+RUN git clone --depth=1 https://github.com/ip-tools/patzilla.git /tmp/patzilla \
     && cd /tmp/patzilla \
     && pip install --no-cache-dir . \
     && rm -rf /tmp/patzilla /root/.cache
