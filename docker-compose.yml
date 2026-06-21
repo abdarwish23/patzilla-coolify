@@ -1,0 +1,96 @@
+# ===========================================
+# PatZilla — Docker Compose for Coolify
+# ===========================================
+# Deploy this stack via Coolify:
+#   1. Create new project → "Docker Compose"
+#   2. Point to this repository / docker-compose.yml
+#   3. (Optional) Set EPO_OPS_KEY + EPO_OPS_SECRET
+#   4. Deploy!
+#
+# FREE sources work out of the box — no API keys needed:
+#   • DPMA/DEPATISnet (German Patent Office)
+#
+# Optional (free) — improves coverage to 80+ countries:
+#   • EPO/OPS — register at https://developers.epo.org/
+# ===========================================
+
+version: "3.8"
+
+services:
+  # -------------------------------------------
+  # PatZilla — Patent Search Platform
+  # -------------------------------------------
+  patzilla:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: patzilla
+    restart: unless-stopped
+    ports:
+      - "${PATZILLA_PORT:-6543}:6543"
+    environment:
+      # MongoDB connection
+      - MONGO_URI=mongodb://mongodb:27017/patzilla
+
+      # EPO/OPS credentials (OPTIONAL — free at https://developers.epo.org/)
+      # Leave empty to use free sources only (DPMA/DEPATISnet)
+      - EPO_OPS_KEY=${EPO_OPS_KEY:-}
+      - EPO_OPS_SECRET=${EPO_OPS_SECRET:-}
+
+      # IFI CLAIMS (optional — professional paid database)
+      - IFI_CLAIMS_URI=${IFI_CLAIMS_URI:-}
+      - IFI_CLAIMS_URI_JSON=${IFI_CLAIMS_URI_JSON:-}
+      - IFI_CLAIMS_USER=${IFI_CLAIMS_USER:-}
+      - IFI_CLAIMS_PASS=${IFI_CLAIMS_PASS:-}
+
+      # depa.tech (optional — paid)
+      - DEPATECH_URI=${DEPATECH_URI:-}
+      - DEPATECH_USER=${DEPATECH_USER:-}
+      - DEPATECH_PASS=${DEPATECH_PASS:-}
+
+      # SMTP (optional — for sharing features)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+    volumes:
+      - patzilla_data:/var/lib/patzilla
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - patzilla_net
+
+  # -------------------------------------------
+  # MongoDB — Database
+  # -------------------------------------------
+  mongodb:
+    image: mongo:6
+    container_name: patzilla-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - patzilla_net
+
+# -------------------------------------------
+# Volumes
+# -------------------------------------------
+volumes:
+  patzilla_data:
+    driver: local
+  mongodb_data:
+    driver: local
+
+# -------------------------------------------
+# Network
+# -------------------------------------------
+networks:
+  patzilla_net:
+    driver: bridge
