@@ -3,16 +3,12 @@
 # ===========================================
 # PatZilla is a modular patent information research platform
 # with access to multiple data sources (EPO/OPS, DPMA, IFI Claims, etc.)
-#
-# Build:  docker build -t patzilla .
-# Run:    docker run -p 6543:6543 patzilla
 # ===========================================
 
 FROM debian:bullseye-slim
 
-LABEL maintainer="Coralyx <coralyx@example.com>"
+LABEL maintainer="Coralyx"
 LABEL description="PatZilla IP Navigator — Patent search platform"
-LABEL org.opencontainers.image.source="https://github.com/ip-tools/patzilla"
 
 # -------------------------------------------
 # 1. Install system dependencies
@@ -40,6 +36,7 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
     libfontconfig1 \
     libfreetype6 \
     ca-certificates \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------
@@ -61,13 +58,16 @@ RUN pip install --no-cache-dir \
     "certifi==2021.5.30"
 
 # -------------------------------------------
-# 4. Install PatZilla from PyPI
+# 4. Clone PatZilla source and install properly
+#    (source install registers entry points correctly)
 # -------------------------------------------
-RUN pip install --no-cache-dir --no-deps patzilla==0.169.3 \
-    && pip install --no-cache-dir patzilla==0.169.3
+RUN git clone --depth=1 --branch v0.169.3 https://github.com/ip-tools/patzilla.git /tmp/patzilla \
+    && cd /tmp/patzilla \
+    && pip install --no-cache-dir . \
+    && rm -rf /tmp/patzilla /root/.cache
 
 # -------------------------------------------
-# 5. Generate default config directory
+# 5. Create config and data directories
 # -------------------------------------------
 RUN mkdir -p /etc/patzilla /var/lib/patzilla /var/log/patzilla
 
