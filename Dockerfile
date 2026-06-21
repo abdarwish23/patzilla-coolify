@@ -50,34 +50,46 @@ RUN wget -q https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py \
     && rm /tmp/get-pip.py
 
 # -------------------------------------------
-# 3. Install PatZilla from PyPI
+# 3. Pin compatible dependency versions FIRST
+#    (fixes urllib3 / requests version conflict)
 # -------------------------------------------
-RUN pip install --no-cache-dir patzilla==0.169.3
+RUN pip install --no-cache-dir \
+    "urllib3==1.25.11" \
+    "requests==2.25.1" \
+    "chardet==4.0.0" \
+    "idna==2.10" \
+    "certifi==2021.5.30"
 
 # -------------------------------------------
-# 4. Generate default config
+# 4. Install PatZilla from PyPI
+# -------------------------------------------
+RUN pip install --no-cache-dir --no-deps patzilla==0.169.3 \
+    && pip install --no-cache-dir patzilla==0.169.3
+
+# -------------------------------------------
+# 5. Generate default config directory
 # -------------------------------------------
 RUN mkdir -p /etc/patzilla /var/lib/patzilla /var/log/patzilla
 
 # -------------------------------------------
-# 5. Copy entrypoint script
+# 6. Copy entrypoint script
 # -------------------------------------------
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # -------------------------------------------
-# 6. Expose port and set working directory
+# 7. Expose port and set working directory
 # -------------------------------------------
 EXPOSE 6543
 WORKDIR /var/lib/patzilla
 
 # -------------------------------------------
-# 7. Health check
+# 8. Health check
 # -------------------------------------------
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:6543/navigator/ || exit 1
 
 # -------------------------------------------
-# 8. Entrypoint
+# 9. Entrypoint
 # -------------------------------------------
 ENTRYPOINT ["/entrypoint.sh"]
