@@ -23,7 +23,7 @@ WORKDIR /tmp/patzilla
 
 RUN yarn install --network-timeout 600000 || yarn install
 
-RUN yarn build
+RUN yarn release
 
 # -------------------------------------------
 # Stage 2: Final image with Python 2.7
