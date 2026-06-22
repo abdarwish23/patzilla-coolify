@@ -7,11 +7,23 @@
 set -e
 
 CONFIG_FILE="/etc/patzilla/patzilla.ini"
+VENDORS_FILE="/etc/patzilla/vendors.ini"
 MONGO_URI="${MONGO_URI:-mongodb://mongodb:27017/patzilla}"
 
 echo "==========================================="
 echo "  PatZilla IP Navigator — Starting..."
 echo "==========================================="
+
+# -------------------------------------------
+# Create vendors.ini if it doesn't exist
+# -------------------------------------------
+if [ ! -f "$VENDORS_FILE" ]; then
+    cat > "$VENDORS_FILE" << EOF
+# vendors.ini — empty by default
+# Vendor-specific overrides can be added here
+EOF
+    echo "[✓] Created $VENDORS_FILE"
+fi
 
 # -------------------------------------------
 # Detect available data sources
