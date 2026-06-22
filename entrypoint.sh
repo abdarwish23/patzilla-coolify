@@ -4,7 +4,6 @@
 # Generates config from environment variables
 # Uses FREE sources by default, EPO/OPS optional
 # ===========================================
-set -e
 
 CONFIG_FILE="/etc/patzilla/patzilla.ini"
 VENDORS_FILE="/etc/patzilla/vendors.ini"
@@ -236,6 +235,61 @@ echo "Access at: http://localhost:6543/navigator/"
 echo ""
 
 # -------------------------------------------
-# Start PatZilla
+# Wait for MongoDB (retry up to 30 times = 60s)
 # -------------------------------------------
-exec pserve "$CONFIG_FILE"
+echo "Waiting for MongoDB at $MONGO_URI..."
+for i in $(seq 1 30); do
+    if python2 -c "
+import pymongo
+try:
+    c = pymongo.Connection('${MONGO_URI}', serverSelectionTimeoutMS=2000)
+    c.server_info()
+    print('MongoDB connected')
+except Exception as e:
+    print('MongoDB not ready: ' + str(e))
+    import sys; sys.exit(1)
+" 2>/dev/null; then
+        echo "[✓] MongoDB is ready"
+        break
+    fi
+    echo "  Waiting for MongoDB... ($i/30)"
+    sleep 2
+done
+
+# -------------------------------------------
+# Start PatZilla (with retry)
+# -------------------------------------------
+MAX_RETRIES=3
+RETRY=0
+
+while [ $RETRY -lt $MAX_RETRIES ]; do
+    RETRY=$((RETRY + 1))
+    echo ""
+    echo "Starting PatZilla (attempt $RETRY/$MAX_RETRIES)..."
+
+    pserve "$CONFIG_FILE"
+    EXIT_CODE=$?
+
+    if [ $EXIT_CODE -eq 0 ]; then
+        break
+    fi
+
+    echo "[!] pserve exited with code $EXIT_CODE"
+    if [ $RETRY -lt $MAX_RETRIES ]; then
+        echo "    Retrying in 5 seconds..."
+        sleep 5
+    fi
+done
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "[ERROR] PatZilla failed to start after $MAX_RETRIES attempts."
+    echo "[ERROR] Last exit code: $EXIT_CODE"
+    echo ""
+    echo "--- Container logs ---"
+    echo "Config file: $CONFIG_FILE"
+    echo "MongoDB URI: $MONGO_URI"
+    echo ""
+    echo "Keeping container alive for debugging..."
+    tail -f /dev/null
+fi
