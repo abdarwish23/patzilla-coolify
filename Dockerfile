@@ -1,10 +1,34 @@
 # ===========================================
 # PatZilla — Dockerfile for Coolify deployment
 # ===========================================
-# PatZilla is a modular patent information research platform
-# with access to multiple data sources (EPO/OPS, DPMA, IFI Claims, etc.)
+# Multi-stage build: frontend (Node 14) + backend (Python 2.7)
 # ===========================================
 
+# -------------------------------------------
+# Stage 1: Build frontend with Node.js 14
+# -------------------------------------------
+FROM node:14-bullseye-slim AS frontend-builder
+
+RUN apt-get update && apt-get install --yes --no-install-recommends \
+    git \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g yarn
+
+RUN git clone --depth=1 https://github.com/ip-tools/patzilla.git /tmp/patzilla
+
+WORKDIR /tmp/patzilla
+
+RUN yarn install --network-timeout 600000 || yarn install
+
+RUN yarn build
+
+# -------------------------------------------
+# Stage 2: Final image with Python 2.7
+# -------------------------------------------
 FROM debian:bullseye-slim
 
 LABEL maintainer="Coralyx"
@@ -37,15 +61,6 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
     libfreetype6 \
     ca-certificates \
     git \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# -------------------------------------------
-# 1b. Install Node.js for building frontend
-# -------------------------------------------
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g yarn \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------
@@ -57,7 +72,6 @@ RUN wget -q https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py \
 
 # -------------------------------------------
 # 3. Pin compatible dependency versions FIRST
-#    (fixes urllib3 / requests version conflict)
 # -------------------------------------------
 RUN pip install --no-cache-dir \
     "urllib3==1.25.11" \
@@ -67,39 +81,42 @@ RUN pip install --no-cache-dir \
     "certifi==2021.5.30"
 
 # -------------------------------------------
-# 4. Clone PatZilla source, build frontend, and install
+# 4. Clone PatZilla source and install Python package
 # -------------------------------------------
 RUN git clone --depth=1 https://github.com/ip-tools/patzilla.git /tmp/patzilla \
     && cd /tmp/patzilla \
-    && yarn install --frozen-lockfile || yarn install \
-    && yarn build \
     && pip install --no-cache-dir . \
     && rm -rf /tmp/patzilla /root/.cache
 
 # -------------------------------------------
-# 5. Create config and data directories
+# 5. Copy built frontend assets from stage 1
+# -------------------------------------------
+COPY --from=frontend-builder /tmp/patzilla/patzilla/navigator/static/assets /usr/local/lib/python2.7/dist-packages/patzilla/navigator/static/assets
+
+# -------------------------------------------
+# 6. Create config and data directories
 # -------------------------------------------
 RUN mkdir -p /etc/patzilla /var/lib/patzilla /var/log/patzilla
 
 # -------------------------------------------
-# 6. Copy entrypoint script
+# 7. Copy entrypoint script
 # -------------------------------------------
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # -------------------------------------------
-# 7. Expose port and set working directory
+# 8. Expose port and set working directory
 # -------------------------------------------
 EXPOSE 6543
 WORKDIR /var/lib/patzilla
 
 # -------------------------------------------
-# 8. Health check
+# 9. Health check
 # -------------------------------------------
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:6543/navigator/ || exit 1
 
 # -------------------------------------------
-# 9. Entrypoint
+# 10. Entrypoint
 # -------------------------------------------
 ENTRYPOINT ["/entrypoint.sh"]
