@@ -11,6 +11,7 @@ FROM node:14-bullseye-slim AS frontend-builder
 
 RUN apt-get update && apt-get install --yes --no-install-recommends \
     git \
+    ca-certificates \
     python3 \
     make \
     g++ \
