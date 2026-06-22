@@ -37,6 +37,15 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
     libfreetype6 \
     ca-certificates \
     git \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# -------------------------------------------
+# 1b. Install Node.js for building frontend
+# -------------------------------------------
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g yarn \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------
@@ -58,11 +67,12 @@ RUN pip install --no-cache-dir \
     "certifi==2021.5.30"
 
 # -------------------------------------------
-# 4. Clone PatZilla source and install properly
-#    (source install registers entry points correctly)
+# 4. Clone PatZilla source, build frontend, and install
 # -------------------------------------------
 RUN git clone --depth=1 https://github.com/ip-tools/patzilla.git /tmp/patzilla \
     && cd /tmp/patzilla \
+    && yarn install --frozen-lockfile || yarn install \
+    && yarn build \
     && pip install --no-cache-dir . \
     && rm -rf /tmp/patzilla /root/.cache
 
