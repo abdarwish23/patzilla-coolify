@@ -16,8 +16,6 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g yarn --force
-
 RUN git clone --depth=1 https://github.com/ip-tools/patzilla.git /tmp/patzilla
 
 WORKDIR /tmp/patzilla
