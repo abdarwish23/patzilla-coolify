@@ -68,15 +68,14 @@ services:
     image: mongo:4.4
     container_name: patzilla-mongodb
     restart: unless-stopped
-    command: ["--setParameter", "enableFreeMonitoring=off"]
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_data_v3:/data/db
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongo --quiet
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 20s
     networks:
       - patzilla_net
 
@@ -86,7 +85,7 @@ services:
 volumes:
   patzilla_data:
     driver: local
-  mongodb_data:
+  mongodb_data_v3:
     driver: local
 
 # -------------------------------------------

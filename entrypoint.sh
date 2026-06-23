@@ -242,7 +242,7 @@ for i in $(seq 1 30); do
     if python2 -c "
 import pymongo
 try:
-    c = pymongo.Connection('${MONGO_URI}', serverSelectionTimeoutMS=2000)
+    c = pymongo.Connection('${MONGO_URI}', network_timeout=2)
     c.server_info()
     print('MongoDB connected')
 except Exception as e:
