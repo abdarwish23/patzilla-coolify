@@ -65,13 +65,14 @@ services:
   # MongoDB — Database
   # -------------------------------------------
   mongodb:
-    image: mongo:6
+    image: mongo:4.4
     container_name: patzilla-mongodb
     restart: unless-stopped
+    command: ["--setParameter", "enableFreeMonitoring=off"]
     volumes:
       - mongodb_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: echo 'db.runCommand("ping").ok' | mongo --quiet
       interval: 10s
       timeout: 5s
       retries: 5
